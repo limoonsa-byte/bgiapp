@@ -37,10 +37,41 @@ export function TopBar({ isMobile = false }: TopBarProps) {
   const statusCfg = getStatusConfig(t)[connectionStatus];
   const isOfficePage = currentPage === "office";
 
+  if (isMobile) {
+    return (
+      <header className="shrink-0 border-b border-gray-200/80 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex h-11 min-w-0 items-center gap-1.5 px-3">
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
+              ORO AI OFFICE
+            </div>
+            {isOfficePage && (
+              <div className="truncate text-[10px] text-gray-400 dark:text-gray-500">
+                {t("topbar.activeCountText")} {metrics.activeAgents}/{metrics.totalAgents}
+              </div>
+            )}
+          </div>
+          <ConnectionIndicator
+            statusCfg={statusCfg}
+            connectionError={connectionError}
+            connectionStatus={connectionStatus}
+            compact
+          />
+          <ThemeToggle theme={theme} setTheme={setTheme} compact />
+          <LanguageSwitcher />
+          <LogoutButton />
+        </div>
+        <div className="no-scrollbar overflow-x-auto px-2 pb-1.5">
+          <TopNav currentPage={currentPage} compact />
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 border-b border-gray-200/80 bg-white px-5 dark:border-gray-800 dark:bg-gray-900">
       <div className="min-w-0">
-        <BrandSection metrics={metrics} isOfficePage={isOfficePage} isMobile={isMobile} />
+        <BrandSection metrics={metrics} isOfficePage={isOfficePage} />
       </div>
       <TopNav currentPage={currentPage} />
       <div className="ml-auto flex items-center gap-3 justify-self-end">
@@ -60,23 +91,21 @@ export function TopBar({ isMobile = false }: TopBarProps) {
 function BrandSection({
   metrics,
   isOfficePage,
-  isMobile,
 }: {
   metrics: { activeAgents: number; totalAgents: number; totalTokens: number };
   isOfficePage: boolean;
-  isMobile?: boolean;
 }) {
   const { t } = useTranslation("layout");
 
   return (
     <div className="flex min-w-0 items-center gap-3">
       <h1 className="truncate text-sm font-semibold tracking-tight text-gray-800 dark:text-gray-100">
-        OpenClaw Office
+        ORO AI OFFICE
       </h1>
       <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] tabular-nums text-gray-400 dark:bg-gray-800 dark:text-gray-500">
         v{APP_VERSION}
       </span>
-      {isOfficePage && !isMobile && (
+      {isOfficePage && (
         <div className="ml-2 hidden items-center gap-5 text-xs text-gray-400 dark:text-gray-500 xl:flex">
           <span>
             {t("topbar.activeCountText")}{" "}
@@ -96,7 +125,7 @@ function BrandSection({
   );
 }
 
-function TopNav({ currentPage }: { currentPage: PageId }) {
+function TopNav({ currentPage, compact = false }: { currentPage: PageId; compact?: boolean }) {
   const { t } = useTranslation("layout");
   const navigate = useNavigate();
   const isOfficePage = currentPage === "office";
@@ -112,19 +141,30 @@ function TopNav({ currentPage }: { currentPage: PageId }) {
   ];
 
   return (
-    <nav aria-label={t("topbar.navigation")} className="flex items-center gap-1">
+    <nav
+      aria-label={t("topbar.navigation")}
+      className={compact ? "flex min-w-max items-center gap-1" : "flex items-center gap-1"}
+    >
       {items.map((item) => (
         <button
           key={item.label}
           onClick={item.onClick}
-          className={`relative px-4 py-1 text-sm font-medium transition-colors ${
-            item.active
-              ? "text-gray-900 dark:text-gray-100"
-              : "text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-          }`}
+          className={
+            compact
+              ? `rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  item.active
+                    ? "bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900"
+                    : "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                }`
+              : `relative px-4 py-1 text-sm font-medium transition-colors ${
+                  item.active
+                    ? "text-gray-900 dark:text-gray-100"
+                    : "text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+                }`
+          }
         >
           {item.label}
-          {item.active && (
+          {!compact && item.active && (
             <span className="absolute inset-x-1 -bottom-[9px] h-0.5 rounded-full bg-gray-900 dark:bg-gray-100" />
           )}
         </button>
@@ -137,23 +177,27 @@ function ConnectionIndicator({
   statusCfg,
   connectionError,
   connectionStatus,
+  compact = false,
 }: {
   statusCfg: { color: string; pulse: boolean; label: string };
   connectionError: string | null;
   connectionStatus: ConnectionStatus;
+  compact?: boolean;
 }) {
+  const label = connectionError && connectionStatus === "error" ? connectionError : statusCfg.label;
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2" title={label} aria-label={label}>
       <div
-        className="h-2.5 w-2.5 rounded-full"
+        className={compact ? "h-2.5 w-2.5 shrink-0 rounded-full" : "h-2.5 w-2.5 rounded-full"}
         style={{
           backgroundColor: statusCfg.color,
           animation: statusCfg.pulse ? "pulse 1.5s ease-in-out infinite" : "none",
         }}
       />
-      <span className="text-sm text-gray-500 dark:text-gray-400">
-        {connectionError && connectionStatus === "error" ? connectionError : statusCfg.label}
-      </span>
+      {!compact && (
+        <span className="max-w-40 truncate text-sm text-gray-500 dark:text-gray-400">{label}</span>
+      )}
     </div>
   );
 }
@@ -171,21 +215,29 @@ function LogoutButton() {
       onClick={logout}
       title={t("topbar.logout")}
       aria-label={t("topbar.logout")}
-      className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
     >
       <LogOut className="h-4 w-4" />
     </button>
   );
 }
 
-function ThemeToggle({ theme, setTheme }: { theme: ThemeMode; setTheme: (t: ThemeMode) => void }) {
+function ThemeToggle({
+  theme,
+  setTheme,
+  compact = false,
+}: {
+  theme: ThemeMode;
+  setTheme: (t: ThemeMode) => void;
+  compact?: boolean;
+}) {
   const { t } = useTranslation("layout");
 
   return (
     <button
       onClick={() => setTheme(theme === "light" ? "dark" : "light")}
       title={theme === "light" ? t("topbar.theme.switchToDark") : t("topbar.theme.switchToLight")}
-      className="ml-2 flex h-7 w-7 items-center justify-center rounded-md text-base transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+      className={`${compact ? "" : "ml-2"} flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-base transition-colors hover:bg-gray-200 dark:hover:bg-gray-700`}
     >
       {theme === "light" ? "🌙" : "☀️"}
     </button>
