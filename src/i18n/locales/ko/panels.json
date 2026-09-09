@@ -1,0 +1,7 @@
+{
+  "metrics":{"activeAgents":"활성 AI 직원","totalTokens":"전체 토큰","collaboration":"협업","tokenRate":"토큰 속도","tokenRateUnit":"/분","costLabel":"총 비용","tabs":{"overview":"개요","trend":"추이","topology":"관계도","activity":"활동"}},
+  "agentDetail":{"deselect":"선택 해제","toolCallHistory":"도구 호출 기록"},
+  "eventTimeline":{"newEvents":"새 이벤트 ↓"},
+  "tokenChart":{"total":"합계:","totalLine":"합계"},
+  "activityHeatmap":{"eventsUnit":"이벤트"}
+}
