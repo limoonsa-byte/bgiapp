@@ -62,7 +62,6 @@ export function SessionSwitcher() {
   const handleNewSessionWithAgent = useCallback(
     (agentId: string) => {
       setTargetAgent(agentId);
-      // Allow store to update targetAgentId before creating session
       setTimeout(() => {
         newSession();
         setIsOpen(false);
@@ -81,21 +80,20 @@ export function SessionSwitcher() {
   );
 
   return (
-    <div className="flex items-center gap-1">
-      <div ref={dropdownRef} className="relative">
+    <div className="flex min-w-0 items-center gap-1">
+      <div ref={dropdownRef} className="relative min-w-0">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+          className="flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
         >
-          <MessageSquare className="h-3.5 w-3.5" />
-          <span className="max-w-[140px] truncate">{displayName}</span>
-          <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+          <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+          <span className="max-w-[52vw] truncate sm:max-w-[140px]">{displayName}</span>
+          <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </button>
 
         {isOpen && (
-          <div className="absolute left-0 top-full z-60 mt-1 w-72 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
-            {/* Existing sessions */}
+          <div className="absolute left-0 top-full z-60 mt-1 max-h-[55dvh] w-[min(18rem,calc(100vw-1.5rem))] overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-xl dark:border-gray-700 dark:bg-gray-900">
             {sortedSessions.length > 0 ? (
               sortedSessions.map((session) => (
                 <button
@@ -127,7 +125,6 @@ export function SessionSwitcher() {
               </div>
             )}
 
-            {/* New session section: one entry per available agent */}
             <div className="border-t border-gray-100 dark:border-gray-800">
               <div className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-gray-400">
                 {t("sessionSwitcher.newSession")}
@@ -139,7 +136,7 @@ export function SessionSwitcher() {
                   onClick={() => handleNewSessionWithAgent(agent.id)}
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800"
                 >
-                  <Plus className="h-3.5 w-3.5 text-green-500" />
+                  <Plus className="h-3.5 w-3.5 shrink-0 text-green-500" />
                   <span className="truncate">
                     {t("sessionSwitcher.newSessionWith", { agent: agent.name })}
                   </span>
@@ -163,11 +160,10 @@ export function SessionSwitcher() {
         )}
       </div>
 
-      {/* Quick "+" button always visible in header */}
       <button
         type="button"
         onClick={handleQuickNewSession}
-        className="flex h-6 w-6 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-green-600 dark:hover:bg-gray-800 dark:hover:text-green-400"
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-green-600 dark:hover:bg-gray-800 dark:hover:text-green-400"
         title={t("sessionSwitcher.newSessionTooltip")}
       >
         <Plus className="h-4 w-4" />
