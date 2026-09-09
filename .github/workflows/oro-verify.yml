@@ -16,139 +16,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply Korean and mobile normalization
+      - name: Finish Korean runtime test alignment
         shell: bash
         run: |
           python3 <<'PY'
           from pathlib import Path
 
-          def replace(path, old, new):
-              p = Path(path)
-              text = p.read_text()
-              if old in text:
-                  p.write_text(text.replace(old, new))
-
-          # Mock mode must be Korean too. These strings are runtime content, not i18n labels.
-          mock = {
-              '搜索互联网获取实时信息': '인터넷에서 실시간 정보를 검색합니다',
-              '执行代码并返回结果': '코드를 실행하고 결과를 반환합니다',
-              '读写本地文件': '로컬 파일을 읽고 씁니다',
-              '使用 AI 生成图片': 'AI로 이미지를 생성합니다',
-              '浏览器自动化与测试': '브라우저 자동화 및 테스트',
-              '语音通话技能': '음성 통화 기능',
-              '每日摘要': '일일 요약',
-              '每天下午6点生成工作摘要': '매일 오후 6시에 업무 요약을 생성합니다',
-              '生成今日工作摘要': '오늘 업무 요약 생성',
-              '周报提醒': '주간 보고서 알림',
-              '每周一早上9点发送周报提醒': '매주 월요일 오전 9시에 주간 보고서 알림을 보냅니다',
-              '请提交本周周报': '이번 주 주간 보고서를 제출해 주세요',
-              '健康检查': '상태 점검',
-              '执行系统健康检查': '시스템 상태 점검 실행',
-              '正在分析任务...': '작업을 분석하고 있습니다...',
-              '已完成任务分析。': '작업 분석을 완료했습니다.',
-              '新的 mock 会话': '새 Mock 세션',
-              '你好，请介绍一下 OpenClaw': '안녕하세요. OpenClaw를 소개해 주세요.',
-              '是一个多 Agent 协作系统，支持：': '은(는) 여러 AI 직원이 협업하는 시스템이며 다음을 지원합니다:',
-              '多渠道消息接入（Telegram、Discord、WhatsApp 等）': '다중 채널 메시지 연동 (Telegram, Discord, WhatsApp 등)',
-              '工具调用和技能扩展': '도구 호출 및 스킬 확장',
-              '定时任务调度': '예약 작업 실행',
-              '实时可视化监控': '실시간 시각화 모니터링',
-              '你可以通过 OpenClaw Office 观察 Agent 的协作行为。': 'OpenClaw Office에서 AI 직원들의 협업 상태를 실시간으로 확인할 수 있습니다.',
-              '收到你的消息：「': '메시지를 받았습니다: 「',
-              '这是 Mock 模式下的模拟回复。在连接真实 Gateway 后，这里将显示 Agent 的实际响应。': '현재는 Mock 모드의 예시 응답입니다. 실제 Gateway에 연결하면 AI 직원의 실제 응답이 표시됩니다.',
-              '默认会话': '기본 세션',
-              '飞书会话': 'Feishu 세션',
-              '搜索互联网': '인터넷 검색',
-              '执行代码': '코드 실행',
-              '读取文件内容': '파일 내용 읽기',
-              '写入文件': '파일 쓰기',
-              '执行 Bash 命令': 'Bash 명령 실행',
-              'MCP 协议客户端': 'MCP 프로토콜 클라이언트',
-          }
           p = Path('src/gateway/mock-adapter.ts')
-          text = p.read_text()
-          for old, new in mock.items():
-              text = text.replace(old, new)
-          p.write_text(text)
-
-          # Korean form output in A2UI.
-          p = Path('src/lib/a2ui-schema.ts')
-          text = p.read_text()
-          for old, new in {
-              '"是" : "否"': '"예" : "아니오"',
-              '"（空）"': '"(비어 있음)"',
-              'form.skill || "表单"': 'form.skill || "입력 양식"',
-              '已通过表单补全「${heading}」的输入：': '입력 양식으로 「${heading}」 항목을 보완했습니다:',
-          }.items():
-              text = text.replace(old, new)
-          p.write_text(text)
-
-          # Placeholder staff names shown in the office.
-          p = Path('src/store/office-store.ts')
-          text = p.read_text().replace('`待命-${phIdx}`', '`대기-${phIdx}`').replace('`待命-${i}`', '`대기-${i}`')
-          p.write_text(text)
-
-          # Mobile chat dialog: full width, dynamic viewport height, no desktop drag UX.
-          p = Path('src/components/chat/ChatDialog.tsx')
-          text = p.read_text()
-          if 'import { useResponsive } from "@/hooks/useResponsive";' not in text:
-              text = text.replace(
-                  'import { useChatStreamingText } from "@/hooks/useChatStreamingText";\n',
-                  'import { useChatStreamingText } from "@/hooks/useChatStreamingText";\nimport { useResponsive } from "@/hooks/useResponsive";\n',
-              )
-          if 'const { isMobile } = useResponsive();' not in text:
-              text = text.replace(
-                  '  const { t } = useTranslation("chat");\n',
-                  '  const { t } = useTranslation("chat");\n  const { isMobile } = useResponsive();\n',
-                  1,
-              )
-          text = text.replace(
-              'className={`absolute inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-2xl flex-col overflow-hidden rounded-t-xl border border-b-0 border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 ${',
-              'className={`${isMobile ? "fixed inset-x-0 bottom-0 z-50 mx-0 w-full max-w-none rounded-t-2xl" : "absolute inset-x-0 bottom-0 z-30 mx-auto w-full max-w-2xl rounded-t-xl"} flex flex-col overflow-hidden border border-b-0 border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 ${',
-          )
-          text = text.replace('        height: `${height}px`,', '        height: isMobile ? "min(72dvh, 560px)" : `${height}px`,')
-          text = text.replace(
-              'className="flex h-3 shrink-0 cursor-ns-resize items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800"\n        onMouseDown={handleDragStart}',
-              'className={`flex h-3 shrink-0 items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 ${isMobile ? "cursor-default" : "cursor-ns-resize"}`}\n        onMouseDown={isMobile ? undefined : handleDragStart}',
-          )
-          text = text.replace(
-              'className="relative min-h-0 flex-1 overflow-y-auto px-4 py-2"',
-              'className="relative min-h-0 flex-1 overflow-y-auto px-3 py-2 sm:px-4"',
-          )
-          text = text.replace(
-              'className="shrink-0 border-t border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900"',
-              'className="shrink-0 border-t border-gray-200 bg-white px-2 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:px-3 dark:border-gray-700 dark:bg-gray-900"',
+          text = p.read_text().replace(
+              'Mock: weighing the request and planning a concise reply.',
+              'Mock: 요청을 분석하고 간결한 답변을 준비하고 있습니다.',
           )
           p.write_text(text)
 
-          # The dock bar must never exceed the phone width.
-          p = Path('src/components/chat/ChatDockBar.tsx')
+          p = Path('src/lib/a2ui-schema.test.ts')
           text = p.read_text()
           text = text.replace(
-              'className="border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"',
-              'className="min-w-0 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-gray-700 dark:bg-gray-900"',
+              'expect(message).toContain("已通过表单补全「文章摘要输入」的输入：");',
+              'expect(message).toContain("입력 양식으로 「文章摘要输入」 항목을 보완했습니다:");',
           )
           text = text.replace(
-              'className="flex items-end gap-2 px-3 py-2"',
-              'className="flex min-w-0 items-end gap-1.5 px-2 py-2 sm:gap-2 sm:px-3"',
-          )
-          text = text.replace(
-              'className="flex-1 resize-none rounded-lg border border-gray-200',
-              'className="min-w-0 flex-1 resize-none rounded-lg border border-gray-200',
-          )
-          p.write_text(text)
-
-          # Wide office becomes a pannable game-map viewport on a phone instead of a tiny letterboxed strip.
-          p = Path('src/components/office-2d/FloorPlan.tsx')
-          text = p.read_text()
-          text = text.replace(
-              'className="relative h-full w-full bg-[#ece3d0] dark:bg-[#15110c]"',
-              'className="relative h-full w-full overflow-auto bg-[#ece3d0] overscroll-contain dark:bg-[#15110c]"',
-          )
-          text = text.replace(
-              'className="h-full w-full"\n        preserveAspectRatio="xMidYMid meet"',
-              'className="block h-auto w-[640px] max-w-none md:h-full md:w-full"\n        preserveAspectRatio="xMidYMid meet"',
-              1,
+              'expect(message).toContain("- 同意：是");',
+              'expect(message).toContain("- 同意：예");',
           )
           p.write_text(text)
           PY
@@ -157,7 +46,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add src
-            git commit -m "fix: finish Korean runtime text and phone UX"
+            git commit -m "test: align Korean runtime expectations"
             git push origin HEAD:oro-ai-office-rpg
           fi
 
