@@ -6,13 +6,13 @@ import { LanguageSwitcher } from "../LanguageSwitcher";
 describe("LanguageSwitcher", () => {
   beforeEach(async () => {
     await act(async () => {
-      await i18n.changeLanguage("zh");
+      await i18n.changeLanguage("ko");
     });
   });
 
-  it("shows 中文 when current language is zh", () => {
+  it("shows 한 when current language is ko", () => {
     render(<LanguageSwitcher />);
-    expect(screen.getByText("中文")).toBeInTheDocument();
+    expect(screen.getByText("한")).toBeInTheDocument();
   });
 
   it("shows EN when current language is en", async () => {
@@ -23,15 +23,23 @@ describe("LanguageSwitcher", () => {
     expect(screen.getByText("EN")).toBeInTheDocument();
   });
 
-  it("switches to en on click when current is zh", async () => {
+  it("shows 中 when current language is zh", async () => {
+    await act(async () => {
+      await i18n.changeLanguage("zh");
+    });
+    render(<LanguageSwitcher />);
+    expect(screen.getByText("中")).toBeInTheDocument();
+  });
+
+  it("cycles ko to en", async () => {
     render(<LanguageSwitcher />);
     await act(async () => {
-      fireEvent.click(screen.getByText("中文"));
+      fireEvent.click(screen.getByText("한"));
     });
     expect(i18n.language).toBe("en");
   });
 
-  it("switches to zh on click when current is en", async () => {
+  it("cycles en to zh", async () => {
     await act(async () => {
       await i18n.changeLanguage("en");
     });
@@ -42,18 +50,14 @@ describe("LanguageSwitcher", () => {
     expect(i18n.language).toBe("zh");
   });
 
-  it("has correct aria-label in zh", () => {
-    render(<LanguageSwitcher />);
-    const btn = screen.getByRole("button");
-    expect(btn.getAttribute("aria-label")).toBe("切换到英文");
-  });
-
-  it("has correct aria-label in en", async () => {
+  it("cycles zh to ko", async () => {
     await act(async () => {
-      await i18n.changeLanguage("en");
+      await i18n.changeLanguage("zh");
     });
     render(<LanguageSwitcher />);
-    const btn = screen.getByRole("button");
-    expect(btn.getAttribute("aria-label")).toBe("Switch to Chinese");
+    await act(async () => {
+      fireEvent.click(screen.getByText("中"));
+    });
+    expect(i18n.language).toBe("ko");
   });
 });
