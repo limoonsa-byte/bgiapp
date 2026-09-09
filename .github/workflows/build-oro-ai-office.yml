@@ -1,0 +1,77 @@
+name: Build ORO AI OFFICE preview
+
+on:
+  push:
+    branches: [oro-ai-office-preview]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout preview branch
+        uses: actions/checkout@v4
+        with:
+          ref: oro-ai-office-preview
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Clone upstream OpenClaw Office
+        run: |
+          rm -rf upstream
+          git clone --depth 1 https://github.com/WW-AI-Lab/openclaw-office.git upstream
+
+      - name: Install upstream dependencies
+        working-directory: upstream
+        run: pnpm install --frozen-lockfile
+
+      - name: Build upstream in Mock mode
+        working-directory: upstream
+        env:
+          VITE_MOCK: 'true'
+        run: |
+          pnpm exec tsc -b
+          pnpm exec vite build --base ./
+
+      - name: Assemble ORO preview skin
+        run: |
+          rm -rf site
+          mkdir -p site
+          cp -a upstream/dist/. site/
+          cp oro-overlay.js site/oro-overlay.js
+          cp oro-overlay.css site/oro-overlay.css
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('site/index.html')
+          s = p.read_text(encoding='utf-8')
+          head_patch = '''\n<link rel="stylesheet" href="./oro-overlay.css">\n<script>try{localStorage.setItem('i18nextLng','en')}catch(e){}</script>\n'''
+          body_patch = '''\n<script src="./oro-overlay.js"></script>\n'''
+          s = s.replace('</head>', head_patch + '</head>')
+          s = s.replace('</body>', body_patch + '</body>')
+          s = s.replace('<title>OpenClaw Office</title>', '<title>ORO AI OFFICE</title>')
+          p.write_text(s, encoding='utf-8')
+          PY
+          printf '%s\n' 'Built from https://github.com/WW-AI-Lab/openclaw-office (MIT)' > site/UPSTREAM.txt
+
+      - name: Commit built preview
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add site
+          if git diff --cached --quiet; then
+            echo 'No preview changes to commit.'
+            exit 0
+          fi
+          git commit -m 'build: refresh ORO AI OFFICE preview [build]'
+          git push origin HEAD:oro-ai-office-preview
