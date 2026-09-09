@@ -15,7 +15,7 @@ export function LanguageSwitcher() {
   const label = current === "ko" ? "한" : current === "en" ? "EN" : "中";
   const ariaLabel =
     next === "ko"
-      ? t("topbar.language.switchToKo")
+      ? "한국어로 전환"
       : next === "en"
         ? t("topbar.language.switchToEn")
         : t("topbar.language.switchToZh");
