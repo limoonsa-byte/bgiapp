@@ -10,7 +10,7 @@ function resolveLanguage(language?: string): AppLanguage {
 
 export function LanguageSwitcher() {
   const { i18n, t } = useTranslation("layout");
-  const current = resolveLanguage(i18n.resolvedLanguage ?? i18n.language);
+  const current = resolveLanguage(i18n.language);
   const next: AppLanguage = current === "ko" ? "en" : current === "en" ? "zh" : "ko";
   const label = current === "ko" ? "한" : current === "en" ? "EN" : "中";
   const ariaLabel =
