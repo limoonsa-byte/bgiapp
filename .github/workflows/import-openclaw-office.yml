@@ -26,24 +26,11 @@ jobs:
         run: |
           find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' -exec rm -rf {} +
           rsync -a --delete --exclude='.git' --exclude='.github' /tmp/openclaw-office/ ./
-          rm -rf upstream-github-workflows-backup
-          cp -a /tmp/openclaw-office/.github ./upstream-github-workflows-backup || true
-          mkdir -p .github/workflows
-          cat > .github/workflows/import-openclaw-office.yml <<'YAML'
-          name: Import OpenClaw Office upstream
-          on:
-            workflow_dispatch:
-          jobs:
-            noop:
-              runs-on: ubuntu-latest
-              steps:
-                - run: echo 'Upstream import completed.'
-          YAML
 
       - name: Commit full upstream source
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
+          git add -A -- ':!.github'
           git commit -m 'chore: import full WW-AI-Lab/openclaw-office upstream' || true
           git push origin HEAD:oro-ai-office-original
