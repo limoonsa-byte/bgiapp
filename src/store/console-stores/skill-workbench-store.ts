@@ -22,7 +22,7 @@ const MERMAID_GUARD_SKILL = "skill-workbench-mermaid-guard";
 const DEFAULT_WORKBENCH_SKILLS = [WORKBENCH_CREATOR_SKILL, MERMAID_GUARD_SKILL] as const;
 
 function formatInjectedSkillSection(skillSlug: string, content: string): string {
-  return [`[默认 Skill：${skillSlug}/SKILL.md]`, content.trim()].join("\n");
+  return [`[기본 Skill: ${skillSlug}/SKILL.md]`, content.trim()].join("\n");
 }
 
 async function loadInjectedSkillSections(adapter: ReturnType<typeof getAdapter>, skillSlugs: readonly string[]): Promise<string[]> {
@@ -40,12 +40,12 @@ async function loadInjectedSkillSections(adapter: ReturnType<typeof getAdapter>,
 
 function buildFlowchartTaskPrompt(skillSlug: string): string {
   const skillDir = `${WORKSPACE_SKILLS_DIR}/${skillSlug}`;
-  return `使用Skill「skill-workbench-mermaid-guard」为 skill ${skillSlug} 生成或更新工作流程图，写入 ${skillDir}/FLOWCHART.md。直接执行，不要先解释。`;
+  return `Skill「skill-workbench-mermaid-guard」를 사용해 skill ${skillSlug}의 작업 흐름도를 생성하거나 업데이트하고 ${skillDir}/FLOWCHART.md에 저장하세요. 먼저 설명하지 말고 바로 실행하세요.`;
 }
 
 export function buildInputUiTaskPrompt(skillSlug: string): string {
   const skillDir = `${WORKSPACE_SKILLS_DIR}/${skillSlug}`;
-  return `使用Skill「skill-workbench-mermaid-guard」为 skill ${skillSlug} 生成或更新 A2UI 首次交互输入表单，写入 ${skillDir}/ui.json，并幂等注入 SKILL.md 使用提示。直接执行，不要先解释。`;
+  return `Skill「skill-workbench-mermaid-guard」를 사용해 skill ${skillSlug}의 A2UI 최초 입력 양식을 생성하거나 업데이트하고 ${skillDir}/ui.json에 저장하세요. SKILL.md 사용 안내도 중복 없이 반영하세요. 먼저 설명하지 말고 바로 실행하세요.`;
 }
 
 function stripYamlFrontmatter(text: string): string {
@@ -211,7 +211,7 @@ export const useSkillWorkbenchStore = create<SkillWorkbenchState>((set, get) => 
         if (sections.length > 0) {
           await adapter.chatInject(
             sessionKey,
-            [`[系统：本次对话请遵循 Skills 工作台默认技能执行任务]`, ...sections].join("\n\n"),
+            [`[시스템: 이번 대화에서는 Skills 작업대의 기본 스킬 지침에 따라 작업하세요]`, ...sections].join("\n\n"),
           );
         }
       } catch {
@@ -234,14 +234,14 @@ export const useSkillWorkbenchStore = create<SkillWorkbenchState>((set, get) => 
         await adapter.chatInject(
           key,
           [
-            `[系统：当前正在${mode === "browse" ? "浏览并修改" : "修改"} skill ${currentSkillSlug}]`,
-            `目标目录：${skillDir}`,
-            "【严格范围限制 - 违反视为错误】",
-            `1. 仅允许读写 ${skillDir}/ 目录下的文件（SKILL.md / FLOWCHART.md / ui.json / _meta.json / scripts/ / references/ / tests/ 等）。`,
-            "2. 禁止修改任何其他 skill 目录、全局配置文件（如 ~/.openclaw/config.* 、~/.openclaw/agents/* 、~/.openclaw/settings/*）以及 ~/.openclaw/workspace/skills/ 之外的任何路径。",
-            "3. 禁止创建/删除/重命名其他 skill；禁止修改本 skill 的 slug 与目录名。",
-            "4. 执行任何 read / write / edit / shell 之前，必须先确认目标路径以 " + skillDir + "/ 开头；若用户请求超出该范围，请拒绝并提示“仅在技能工作台中修改当前 skill”。",
-            "5. 流程图结构调整 → FLOWCHART.md；技能说明/行为 → SKILL.md；A2UI 表单 → ui.json；必要时多个同时修改。",
+            `[시스템: 현재 skill ${currentSkillSlug}을(를) ${mode === "browse" ? "검토 및 수정" : "수정"} 중입니다]`,
+            `대상 디렉터리: ${skillDir}`,
+            "【엄격한 작업 범위 제한 - 위반 시 오류로 간주】",
+            `1. ${skillDir}/ 디렉터리 아래 파일만 읽고 쓸 수 있습니다 (SKILL.md / FLOWCHART.md / ui.json / _meta.json / scripts/ / references/ / tests/ 등).`,
+            "2. 다른 skill 디렉터리, 전역 설정 파일(예: ~/.openclaw/config.* , ~/.openclaw/agents/* , ~/.openclaw/settings/*), 그리고 ~/.openclaw/workspace/skills/ 밖의 경로는 수정할 수 없습니다.",
+            "3. 다른 skill을 생성/삭제/이름변경할 수 없으며, 현재 skill의 slug와 디렉터리명도 변경할 수 없습니다.",
+            "4. read / write / edit / shell 실행 전 대상 경로가 " + skillDir + "/ 로 시작하는지 반드시 확인하세요. 범위를 벗어난 요청은 거절하고 “스킬 작업대에서는 현재 skill만 수정할 수 있습니다”라고 안내하세요.",
+            "5. 흐름도 구조 변경 → FLOWCHART.md, 스킬 설명/동작 → SKILL.md, A2UI 양식 → ui.json을 수정하세요. 필요하면 여러 파일을 함께 수정할 수 있습니다.",
             ...sections,
           ].join("\n"),
         );
