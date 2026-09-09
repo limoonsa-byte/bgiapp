@@ -1,0 +1,10 @@
+{
+  "topbar": {
+    "activeCount":"활성 <strong>{{active}}/{{total}}</strong>","tokens":"토큰 <strong>{{count}}</strong>","activeCountText":"활성","tokensLabel":"토큰","console":"콘솔","office":"오피스","chat":"채팅","workbench":"스킬 작업대","navigation":"주요 메뉴","logout":"로그아웃",
+    "pageTitles":{"chat":"채팅","dashboard":"대시보드","channels":"채널","skills":"스킬","cron":"자동실행","agents":"AI 직원","settings":"설정","fallback":"콘솔"},
+    "theme":{"switchToDark":"다크 모드로 전환","switchToLight":"라이트 모드로 전환"},
+    "language":{"switchToKo":"한국어로 전환","switchToEn":"영어로 전환","switchToZh":"중국어로 전환"}
+  },
+  "sidebar": {"agents":"AI 직원","expand":"사이드바 펼치기","collapse":"사이드바 접기","closeSidebar":"사이드바 닫기","expandSidebar":"사이드바 펼치기","collapseSidebar":"사이드바 접기","metricsTitle":"현황 / 추이","agentList":"AI 직원 목록","subAgents":"하위 AI 직원","agentDetail":"직원 상세","eventTimeline":"이벤트 타임라인","searchPlaceholder":"AI 직원 검색...","filters":{"all":"전체","active":"작업중","idle":"대기중","error":"오류"}},
+  "consoleNav": {"dashboard":"대시보드","agents":"AI 직원","channels":"채널","skills":"스킬","skillWorkbench":"스킬 작업대","cron":"자동실행","settings":"설정"}
+}
