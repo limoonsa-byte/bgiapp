@@ -657,7 +657,7 @@ export class MockAdapter implements GatewayAdapter {
           ts: Date.now(),
           sessionKey: params.sessionKey,
           data: {
-            text: "Mock: weighing the request and planning a concise reply.\n",
+            text: "Mock: 요청을 분석하고 간결한 답변을 준비하고 있습니다.\n",
           },
         },
       });

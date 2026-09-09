@@ -173,7 +173,7 @@ describe("buildSubmissionMessage", () => {
 
   it("produces a human-readable summary with option labels", () => {
     const message = buildSubmissionMessage(form, { source_text: "正文", count: "5", tone: "正式" });
-    expect(message).toContain("已通过表单补全「文章摘要输入」的输入：");
+    expect(message).toContain("입력 양식으로 「文章摘要输入」 항목을 보완했습니다:");
     expect(message).toContain("- 文章内容：正文");
     expect(message).toContain("- 条数：5 条");
     expect(message).toContain("- 语气：正式");
@@ -198,7 +198,7 @@ describe("buildSubmissionMessage", () => {
       }),
     ) as A2uiForm;
     const message = buildSubmissionMessage(f, { agree: true, tags: ["a", "b"] });
-    expect(message).toContain("- 同意：是");
+    expect(message).toContain("- 同意：예");
     expect(message).toContain("- 标签：甲、乙");
   });
 
