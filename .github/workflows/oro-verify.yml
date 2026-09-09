@@ -16,40 +16,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Finish Korean runtime test alignment
-        shell: bash
-        run: |
-          python3 <<'PY'
-          from pathlib import Path
-
-          p = Path('src/gateway/mock-adapter.ts')
-          text = p.read_text().replace(
-              'Mock: weighing the request and planning a concise reply.',
-              'Mock: 요청을 분석하고 간결한 답변을 준비하고 있습니다.',
-          )
-          p.write_text(text)
-
-          p = Path('src/lib/a2ui-schema.test.ts')
-          text = p.read_text()
-          text = text.replace(
-              'expect(message).toContain("已通过表单补全「文章摘要输入」的输入：");',
-              'expect(message).toContain("입력 양식으로 「文章摘要输入」 항목을 보완했습니다:");',
-          )
-          text = text.replace(
-              'expect(message).toContain("- 同意：是");',
-              'expect(message).toContain("- 同意：예");',
-          )
-          p.write_text(text)
-          PY
-
-          if ! git diff --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src
-            git commit -m "test: align Korean runtime expectations"
-            git push origin HEAD:oro-ai-office-rpg
-          fi
-
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
