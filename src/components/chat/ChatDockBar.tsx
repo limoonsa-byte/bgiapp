@@ -64,7 +64,7 @@ export function ChatDockBar() {
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <div className="min-w-0 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)] dark:border-gray-700 dark:bg-gray-900">
       {error && (
         <div className="flex items-center justify-between bg-red-50 px-3 py-1.5 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
           <span className="truncate">{error}</span>
@@ -78,7 +78,7 @@ export function ChatDockBar() {
         </div>
       )}
 
-      <div className="flex items-end gap-2 px-3 py-2">
+      <div className="flex min-w-0 items-end gap-1.5 px-2 py-2 sm:gap-2 sm:px-3">
         {/* Left: Agent selector + expand toggle */}
         <div className="flex items-center gap-1">
           <AgentSelector />
@@ -121,7 +121,7 @@ export function ChatDockBar() {
           onCompositionEnd={() => setIsComposing(false)}
           placeholder={t("dock.placeholder")}
           maxRows={4}
-          className="flex-1 resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm outline-none transition-colors placeholder:text-gray-400 focus:border-blue-400 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-500 dark:focus:border-blue-500 dark:focus:bg-gray-900"
+          className="min-w-0 flex-1 resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm outline-none transition-colors placeholder:text-gray-400 focus:border-blue-400 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:placeholder:text-gray-500 dark:focus:border-blue-500 dark:focus:bg-gray-900"
         />
 
         {/* Send / Stop button */}

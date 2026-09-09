@@ -84,7 +84,7 @@ const MOCK_SKILLS: SkillInfo[] = [
     id: "web-search",
     slug: "web-search",
     name: "Web Search",
-    description: "搜索互联网获取实时信息",
+    description: "인터넷에서 실시간 정보를 검색합니다",
     enabled: true,
     icon: "🔍",
     version: "1.0.0",
@@ -102,7 +102,7 @@ const MOCK_SKILLS: SkillInfo[] = [
     id: "code-interpreter",
     slug: "code-interpreter",
     name: "Code Interpreter",
-    description: "执行代码并返回结果",
+    description: "코드를 실행하고 결과를 반환합니다",
     enabled: true,
     icon: "💻",
     version: "1.2.0",
@@ -116,7 +116,7 @@ const MOCK_SKILLS: SkillInfo[] = [
     id: "file-editor",
     slug: "file-editor",
     name: "File Editor",
-    description: "读写本地文件",
+    description: "로컬 파일을 읽고 씁니다",
     enabled: true,
     icon: "📝",
     version: "1.0.0",
@@ -130,7 +130,7 @@ const MOCK_SKILLS: SkillInfo[] = [
     id: "image-gen",
     slug: "image-gen",
     name: "Image Generation",
-    description: "使用 AI 生成图片",
+    description: "AI로 이미지를 생성합니다",
     enabled: true,
     icon: "🎨",
     version: "0.9.0",
@@ -144,7 +144,7 @@ const MOCK_SKILLS: SkillInfo[] = [
     id: "playwright",
     slug: "playwright",
     name: "Playwright",
-    description: "浏览器自动化与测试",
+    description: "브라우저 자동화 및 테스트",
     enabled: true,
     icon: "🎭",
     version: "1.1.0",
@@ -162,7 +162,7 @@ const MOCK_SKILLS: SkillInfo[] = [
     id: "voice-call",
     slug: "voice-call",
     name: "Voice Call",
-    description: "语音通话技能",
+    description: "음성 통화 기능",
     enabled: false,
     icon: "📞",
     version: "0.5.0",
@@ -176,15 +176,15 @@ const MOCK_SKILLS: SkillInfo[] = [
 const MOCK_CRON_TASKS: CronTask[] = [
   {
     id: "cron-1",
-    name: "每日摘要",
-    description: "每天下午6点生成工作摘要",
+    name: "일일 요약",
+    description: "매일 오후 6시에 업무 요약을 생성합니다",
     schedule: { kind: "cron", expr: "0 18 * * *" },
     enabled: true,
     createdAtMs: Date.now() - 7 * 86400_000,
     updatedAtMs: Date.now() - 86400_000,
     sessionTarget: "main",
     wakeMode: "now",
-    payload: { kind: "agentTurn", message: "生成今日工作摘要" },
+    payload: { kind: "agentTurn", message: "오늘 업무 요약 생성" },
     delivery: { mode: "notify", channel: "telegram", target: "bot1" },
     state: {
       lastRunAtMs: Date.now() - 86400_000,
@@ -194,27 +194,27 @@ const MOCK_CRON_TASKS: CronTask[] = [
   },
   {
     id: "cron-2",
-    name: "周报提醒",
-    description: "每周一早上9点发送周报提醒",
+    name: "주간 보고서 알림",
+    description: "每周一早上9点发送주간 보고서 알림",
     schedule: { kind: "cron", expr: "0 9 * * 1" },
     enabled: false,
     createdAtMs: Date.now() - 14 * 86400_000,
     updatedAtMs: Date.now() - 3 * 86400_000,
     sessionTarget: "isolated",
     wakeMode: "next-heartbeat",
-    payload: { kind: "agentTurn", message: "请提交本周周报" },
+    payload: { kind: "agentTurn", message: "이번 주 주간 보고서를 제출해 주세요" },
     state: { lastRunAtMs: Date.now() - 7 * 86400_000, lastRunStatus: "ok" },
   },
   {
     id: "cron-3",
-    name: "健康检查",
+    name: "상태 점검",
     schedule: { kind: "every", everyMs: 1800_000 },
     enabled: true,
     createdAtMs: Date.now() - 30 * 86400_000,
     updatedAtMs: Date.now(),
     sessionTarget: "main",
     wakeMode: "now",
-    payload: { kind: "agentTurn", message: "执行系统健康检查" },
+    payload: { kind: "agentTurn", message: "执行系统상태 점검" },
     state: {
       lastRunAtMs: Date.now() - 1200_000,
       lastRunStatus: "error",
@@ -409,7 +409,7 @@ class SubAgentSimulator {
         seq: 2,
         stream: "assistant",
         ts: Date.now(),
-        data: { text: `Sub-agent ${subId} 正在分析任务...` },
+        data: { text: `Sub-agent ${subId} 작업을 분석하고 있습니다...` },
         sessionKey,
       });
     }, randRange(1000, 2000));
@@ -437,7 +437,7 @@ class SubAgentSimulator {
         seq: 4,
         stream: "assistant",
         ts: Date.now(),
-        data: { text: `Sub-agent ${subId} 已完成任务分析。` },
+        data: { text: `Sub-agent ${subId} 작업 분석을 완료했습니다.` },
         sessionKey,
       });
     }, randRange(6000, 9000));
@@ -621,21 +621,21 @@ export class MockAdapter implements GatewayAdapter {
   }
 
   async chatHistory(sessionKey?: string): Promise<ChatHistoryResult> {
-    const prefix = sessionKey?.includes("session-") ? "新的 mock 会话" : "OpenClaw";
+    const prefix = sessionKey?.includes("session-") ? "새 Mock 세션" : "OpenClaw";
     return {
       thinkingLevel: "medium",
       messages: [
       {
         id: "msg-hist-1",
         role: "user",
-        content: "你好，请介绍一下 OpenClaw",
+        content: "안녕하세요. OpenClaw를 소개해 주세요.",
         timestamp: Date.now() - 120_000,
       },
       {
         id: "msg-hist-2",
         role: "assistant",
         content:
-          `**${prefix}** 是一个多 Agent 协作系统，支持：\n\n- 多渠道消息接入（Telegram、Discord、WhatsApp 等）\n- 工具调用和技能扩展\n- 定时任务调度\n- 实时可视化监控\n\n你可以通过 OpenClaw Office 观察 Agent 的协作行为。`,
+          `**${prefix}** 은(는) 여러 AI 직원이 협업하는 시스템이며 다음을 지원합니다:\n\n- 다중 채널 메시지 연동 (Telegram, Discord, WhatsApp 등)\n- 도구 호출 및 스킬 확장\n- 예약 작업 실행\n- 실시간 시각화 모니터링\n\nOpenClaw Office에서 AI 직원들의 협업 상태를 실시간으로 확인할 수 있습니다.`,
         timestamp: Date.now() - 110_000,
       },
       ],
@@ -644,7 +644,7 @@ export class MockAdapter implements GatewayAdapter {
 
   async chatSend(params: ChatSendParams): Promise<void> {
     const runId = `mock-run-${Date.now()}`;
-    const responseText = `收到你的消息：「${params.text}」\n\n这是 Mock 模式下的模拟回复。在连接真实 Gateway 后，这里将显示 Agent 的实际响应。`;
+    const responseText = `메시지를 받았습니다: 「${params.text}」\n\n현재는 Mock 모드의 예시 응답입니다. 실제 Gateway에 연결하면 AI 직원의 실제 응답이 표시됩니다.`;
 
     this.scheduleTimer(() => {
       this.emit("agent", {
@@ -821,7 +821,7 @@ export class MockAdapter implements GatewayAdapter {
       {
         key: "agent:main:main",
         agentId: "main",
-        label: "默认会话",
+        label: "기본 세션",
         createdAt: Date.now() - 3600_000,
         lastActiveAt: Date.now(),
         messageCount: 12,
@@ -829,7 +829,7 @@ export class MockAdapter implements GatewayAdapter {
       {
         key: "agent:main:feishu:direct:test-user",
         agentId: "main",
-        label: "飞书会话",
+        label: "Feishu 세션",
         createdAt: Date.now() - 1800_000,
         lastActiveAt: Date.now() - 60_000,
         messageCount: 8,
@@ -1010,12 +1010,12 @@ export class MockAdapter implements GatewayAdapter {
   async toolsCatalog(_agentId?: string): Promise<ToolCatalog> {
     return {
       tools: [
-        { name: "web_search", description: "搜索互联网", source: "built-in", group: "core", enabled: true },
-        { name: "code_exec", description: "执行代码", source: "built-in", group: "core", enabled: true },
-        { name: "file_read", description: "读取文件内容", source: "built-in", group: "fs", enabled: true },
-        { name: "file_write", description: "写入文件", source: "built-in", group: "fs", enabled: true },
-        { name: "bash", description: "执行 Bash 命令", source: "built-in", group: "exec", enabled: true, optional: true },
-        { name: "mcp_client", description: "MCP 协议客户端", source: "plugin", group: "integrations", enabled: false, optional: true },
+        { name: "web_search", description: "인터넷 검색", source: "built-in", group: "core", enabled: true },
+        { name: "code_exec", description: "코드 실행", source: "built-in", group: "core", enabled: true },
+        { name: "file_read", description: "파일 내용 읽기", source: "built-in", group: "fs", enabled: true },
+        { name: "file_write", description: "파일 쓰기", source: "built-in", group: "fs", enabled: true },
+        { name: "bash", description: "Bash 명령 실행", source: "built-in", group: "exec", enabled: true, optional: true },
+        { name: "mcp_client", description: "MCP 프로토콜 클라이언트", source: "plugin", group: "integrations", enabled: false, optional: true },
       ],
     };
   }

@@ -227,11 +227,11 @@ function optionLabel(field: A2uiField, value: string): string {
 }
 
 function displayValue(field: A2uiField, value: A2uiValue | undefined): string {
-  if (field.type === "checkbox") return value === true ? "是" : "否";
+  if (field.type === "checkbox") return value === true ? "예" : "아니오";
   if (field.type === "file") {
-    if (!value) return "（空）";
+    if (!value) return "(비어 있음)";
     if (Array.isArray(value)) {
-      if (value.length === 0) return "（空）";
+      if (value.length === 0) return "(비어 있음)";
       return (value as A2uiFileValue[]).map((f) => f.name).join("、");
     }
     return (value as A2uiFileValue).name;
@@ -239,7 +239,7 @@ function displayValue(field: A2uiField, value: A2uiValue | undefined): string {
   if (Array.isArray(value)) {
     return (value as string[]).map((item) => optionLabel(field, item)).join("、");
   }
-  if (value === undefined || value === "") return "（空）";
+  if (value === undefined || value === "") return "(비어 있음)";
   if (field.type === "select" || field.type === "radio") {
     return optionLabel(field, String(value));
   }
@@ -255,7 +255,7 @@ export function buildSubmissionMessage(
   form: A2uiForm,
   values: Record<string, A2uiValue | undefined>,
 ): string {
-  const heading = form.title?.trim() || form.skill || "表单";
+  const heading = form.title?.trim() || form.skill || "입력 양식";
   const lines = form.fields.map((field) => `- ${field.label}：${displayValue(field, values[field.key])}`);
 
   const payload: Record<string, unknown> = {};
@@ -276,7 +276,7 @@ export function buildSubmissionMessage(
   }
 
   return [
-    `已通过表单补全「${heading}」的输入：`,
+    `입력 양식으로 「${heading}」 항목을 보완했습니다:`,
     ...lines,
     "",
     `[a2ui-data] ${JSON.stringify(payload)}`,

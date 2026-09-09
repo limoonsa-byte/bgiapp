@@ -98,10 +98,10 @@ export function FloorPlan() {
   };
 
   return (
-    <div className="relative h-full w-full bg-[#ece3d0] dark:bg-[#15110c]">
+    <div className="relative h-full w-full overflow-auto bg-[#ece3d0] overscroll-contain dark:bg-[#15110c]">
       <svg
         viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-        className="h-full w-full"
+        className="block h-auto w-[640px] max-w-none md:h-full md:w-full"
         preserveAspectRatio="xMidYMid meet"
       >
         <defs>
