@@ -1,0 +1,44 @@
+node_modules/
+dist/
+.env
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.venv/
+.pnpm-store/
+.cursor/
+.codex/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+*.tsbuildinfo
+output/
+
+# Test
+coverage/
+debug-gw.cjs
+
+# Logs
+*.log
+
+# Agent
+.agent/
+.agents/
+.runtime/
+.worktrees/
+.claude/settings.local.json
+.codex/skills/openclaw-office-release/
+
+#
+docs/
+openspec/
+output/playwright/chat-inline-tool-check-1.png
+*.tgz
+fireworks-tech-graph/

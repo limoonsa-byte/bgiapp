@@ -1,0 +1,332 @@
+import { uuid } from "@/lib/uuid";
+import { buildDeviceAuthPayload } from "./device-auth";
+import { loadOrCreateDeviceIdentity, signDevicePayload } from "./device-identity";
+import type {
+  ConnectionStatus,
+  ConnectParams,
+  GatewayEventFrame,
+  GatewayFrame,
+  GatewayResponseFrame,
+  HelloOk,
+} from "./types";
+
+const MAX_RECONNECT_ATTEMPTS = 20;
+const BASE_DELAY_MS = 1000;
+const MAX_DELAY_MS = 30000;
+const JITTER_MS = 1000;
+const MIN_PROTOCOL_VERSION = 3;
+const MAX_PROTOCOL_VERSION = 4;
+
+type EventHandler = (event: GatewayEventFrame) => void;
+type StatusHandler = (status: ConnectionStatus, error?: string) => void;
+type ResponseHandler = (frame: GatewayResponseFrame) => void;
+
+export class GatewayWsClient {
+  private ws: WebSocket | null = null;
+  private url = "";
+  private token = "";
+  private password = "";
+  private status: ConnectionStatus = "disconnected";
+  private reconnectAttempt = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private shutdownReceived = false;
+
+  private eventHandlers = new Map<string, Set<EventHandler>>();
+  private statusHandlers = new Set<StatusHandler>();
+  private responseHandlers = new Map<string, ResponseHandler>();
+
+  private snapshot: HelloOk["snapshot"] | null = null;
+  private serverInfo: HelloOk["server"] | null = null;
+  private authInfo: HelloOk["auth"] | null = null;
+  private handleClose: () => void = () => {};
+
+  getStatus(): ConnectionStatus {
+    return this.status;
+  }
+
+  getSnapshot(): HelloOk["snapshot"] | null {
+    return this.snapshot;
+  }
+
+  getAuthInfo(): HelloOk["auth"] | null {
+    return this.authInfo;
+  }
+
+  getServerInfo(): HelloOk["server"] | null {
+    return this.serverInfo;
+  }
+
+  isConnected(): boolean {
+    return this.status === "connected" && this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  connect(url: string, token: string, password = ""): void {
+    this.url = url;
+    this.token = token;
+    this.password = password;
+    this.shutdownReceived = false;
+    this.reconnectAttempt = 0;
+    this.doConnect();
+  }
+
+  disconnect(): void {
+    this.shutdownReceived = true;
+    this.clearReconnectTimer();
+    if (this.ws) {
+      this.ws.removeEventListener("close", this.handleClose);
+      this.ws.close();
+      this.ws = null;
+    }
+    this.setStatus("disconnected");
+  }
+
+  onEvent(eventName: string, handler: EventHandler): () => void {
+    let handlers = this.eventHandlers.get(eventName);
+    if (!handlers) {
+      handlers = new Set();
+      this.eventHandlers.set(eventName, handlers);
+    }
+    handlers.add(handler);
+    return () => handlers!.delete(handler);
+  }
+
+  onStatusChange(handler: StatusHandler): () => void {
+    this.statusHandlers.add(handler);
+    return () => this.statusHandlers.delete(handler);
+  }
+
+  onResponse(id: string, handler: ResponseHandler): void {
+    this.responseHandlers.set(id, handler);
+  }
+
+  send(data: unknown): void {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      let serialized: string;
+      try {
+        serialized = JSON.stringify(data);
+      } catch (err) {
+        // Surface serialization failures (e.g. circular structure) so callers
+        // can show a meaningful error instead of silently doing nothing.
+        // eslint-disable-next-line no-console
+        console.error("[ws-client] Failed to serialize message:", err);
+        throw err;
+      }
+      this.ws.send(serialized);
+    }
+  }
+
+  private doConnect(): void {
+    this.setStatus(this.reconnectAttempt > 0 ? "reconnecting" : "connecting");
+
+    try {
+      this.ws = new WebSocket(this.url);
+    } catch (err) {
+      // Construction failed synchronously (e.g. invalid URL). Surface as an
+      // immediate error so the caller can mark the login form interactive
+      // again — otherwise the user is stuck in "连接中..." with no feedback.
+      this.setStatus("error", err instanceof Error ? err.message : "Invalid WebSocket URL");
+      return;
+    }
+
+    this.handleClose = () => {
+      if (!this.shutdownReceived) {
+        this.scheduleReconnect();
+      }
+    };
+
+    this.ws.addEventListener("open", () => {
+      // Wait for challenge event from server
+    });
+    this.ws.addEventListener("message", (e) => {
+      this.handleMessage(e);
+    });
+    this.ws.addEventListener("close", this.handleClose);
+    this.ws.addEventListener("error", () => {
+      // First connect failure: surface immediately so the UI can recover.
+      // Without this, the reconnect scheduler would keep retrying in the
+      // background and the user would be stuck on "连接中..." with no
+      // feedback that the URL/token is wrong.
+      if (this.reconnectAttempt === 0 && !this.shutdownReceived) {
+        this.setStatus("error", "Failed to connect to Gateway");
+      }
+    });
+  }
+
+  private handleMessage(e: MessageEvent): void {
+    let frame: GatewayFrame;
+    try {
+      frame = JSON.parse(e.data as string) as GatewayFrame;
+    } catch {
+      return;
+    }
+
+    if (frame.type === "event") {
+      const eventFrame = frame as GatewayEventFrame;
+      this.handleEvent(eventFrame);
+    } else if (frame.type === "res") {
+      const resFrame = frame as GatewayResponseFrame;
+      this.handleResponse(resFrame);
+    }
+  }
+
+  private handleEvent(frame: GatewayEventFrame): void {
+    if (frame.event === "connect.challenge") {
+      const nonce =
+        typeof frame.payload === "object" &&
+        frame.payload !== null &&
+        "nonce" in frame.payload &&
+        typeof (frame.payload as { nonce?: unknown }).nonce === "string"
+          ? (frame.payload as { nonce: string }).nonce
+          : "";
+      void this.sendConnect(nonce);
+      return;
+    }
+
+    if (frame.event === "shutdown") {
+      this.shutdownReceived = true;
+      this.clearReconnectTimer();
+      this.setStatus("disconnected");
+    }
+
+    const handlers = this.eventHandlers.get(frame.event);
+    if (handlers) {
+      for (const handler of handlers) {
+        handler(frame);
+      }
+    }
+
+    const wildcardHandlers = this.eventHandlers.get("*");
+    if (wildcardHandlers) {
+      for (const handler of wildcardHandlers) {
+        handler(frame);
+      }
+    }
+  }
+
+  private handleResponse(frame: GatewayResponseFrame): void {
+    const handler = this.responseHandlers.get(frame.id);
+    if (handler) {
+      this.responseHandlers.delete(frame.id);
+      handler(frame);
+      return;
+    }
+
+    // connect 响应（可能没有 id 匹配）
+    if (frame.ok && (frame.payload as HelloOk)?.type === "hello-ok") {
+      this.handleConnectSuccess(frame.payload as HelloOk);
+    } else if (!frame.ok) {
+      this.setStatus("error", frame.error.message);
+    }
+  }
+
+  private async sendConnect(nonce: string): Promise<void> {
+    const role = "operator";
+    const scopes = ["operator.admin", "operator.read"];
+    const params: ConnectParams = {
+      minProtocol: MIN_PROTOCOL_VERSION,
+      maxProtocol: MAX_PROTOCOL_VERSION,
+      role,
+      client: {
+        id: "openclaw-control-ui",
+        version: "0.1.0",
+        platform: "web",
+        mode: "ui",
+      },
+      caps: ["tool-events"],
+      scopes,
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+      locale: typeof navigator !== "undefined" ? navigator.language : undefined,
+    };
+
+    if (this.token || this.password) {
+      params.auth = {};
+      if (this.token) {
+        params.auth.token = this.token;
+      }
+      if (this.password) {
+        params.auth.password = this.password;
+      }
+    }
+
+    const canUseDeviceIdentity =
+      typeof window !== "undefined" &&
+      window.isSecureContext &&
+      typeof crypto !== "undefined" &&
+      typeof crypto.subtle !== "undefined";
+
+    if (canUseDeviceIdentity) {
+      try {
+        const identity = await loadOrCreateDeviceIdentity();
+        const signedAtMs = Date.now();
+        const payload = buildDeviceAuthPayload({
+          deviceId: identity.deviceId,
+          clientId: params.client.id,
+          clientMode: params.client.mode,
+          role,
+          scopes,
+          signedAtMs,
+          token: this.token || null,
+          nonce,
+        });
+        params.device = {
+          id: identity.deviceId,
+          publicKey: identity.publicKey,
+          signature: await signDevicePayload(identity.privateKey, payload),
+          signedAt: signedAtMs,
+          nonce,
+        };
+      } catch {
+        // Fall back to token-only auth; Gateway will return a precise error if device auth is required.
+      }
+    }
+
+    this.send({
+      type: "req",
+      id: uuid(),
+      method: "connect",
+      params,
+    });
+  }
+
+  private handleConnectSuccess(payload: HelloOk): void {
+    this.snapshot = payload.snapshot ?? null;
+    this.serverInfo = payload.server ?? null;
+    this.authInfo = payload.auth ?? null;
+    this.reconnectAttempt = 0;
+    this.setStatus("connected");
+  }
+
+  private scheduleReconnect(): void {
+    if (this.shutdownReceived) {
+      return;
+    }
+    if (this.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+      this.setStatus("disconnected");
+      return;
+    }
+
+    this.setStatus("reconnecting");
+    const delay =
+      Math.min(BASE_DELAY_MS * Math.pow(2, this.reconnectAttempt), MAX_DELAY_MS) +
+      Math.random() * JITTER_MS;
+
+    this.reconnectAttempt++;
+    this.reconnectTimer = setTimeout(() => {
+      this.doConnect();
+    }, delay);
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  private setStatus(status: ConnectionStatus, error?: string): void {
+    this.status = status;
+    for (const handler of this.statusHandlers) {
+      handler(status, error);
+    }
+  }
+}
