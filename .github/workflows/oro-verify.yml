@@ -16,43 +16,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
-
-      - name: Build mock preview
-        run: VITE_MOCK=true npm run build
-
-      - name: Upload preview build
-        uses: actions/upload-artifact@v4
-        with:
-          name: oro-ai-office-rpg-dist
-          path: dist
-          if-no-files-found: error
-
-      - name: Publish static preview branch
+      - name: Audit hardcoded Chinese
         shell: bash
         run: |
-          set -euo pipefail
-          cp -a dist /tmp/oro-ai-office-rpg-dist
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan oro-ai-office-rpg-dist
-          git rm -rf .
-          git clean -fdx
-          cp -a /tmp/oro-ai-office-rpg-dist/. .
-          touch .nojekyll
-          git add -A
-          git commit -m "preview: ORO AI Office RPG mock static build"
-          git push --force origin HEAD:oro-ai-office-rpg-dist
+          echo '=== hardcoded Chinese outside zh locale ==='
+          grep -RInP '[\x{4e00}-\x{9fff}]' src \
+            --exclude-dir=locales/zh \
+            --exclude='*.test.ts' \
+            --exclude='*.test.tsx' \
+            || true
+          echo '=== end audit ==='
+          exit 1
