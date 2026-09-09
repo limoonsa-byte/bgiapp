@@ -31,8 +31,8 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Build
-        run: npm run build
+      - name: Build mock preview
+        run: VITE_MOCK=true npm run build
 
       - name: Upload preview build
         uses: actions/upload-artifact@v4
@@ -54,5 +54,5 @@ jobs:
           cp -a /tmp/oro-ai-office-rpg-dist/. .
           touch .nojekyll
           git add -A
-          git commit -m "preview: ORO AI Office RPG static build"
+          git commit -m "preview: ORO AI Office RPG mock static build"
           git push --force origin HEAD:oro-ai-office-rpg-dist
