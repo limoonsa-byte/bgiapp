@@ -18,17 +18,17 @@ const STREAM_ICONS: Record<string, string> = {
 };
 
 const STREAM_LABELS: Record<string, string> = {
-  lifecycle: "生命周期",
-  tool: "工具调用",
-  assistant: "对话输出",
-  error: "异常",
-  item: "任务项",
-  plan: "计划",
-  approval: "审批",
-  command_output: "命令输出",
-  patch: "文件变更",
-  thinking: "思考",
-  compaction: "上下文压缩",
+  lifecycle: "수명주기",
+  tool: "도구 호출",
+  assistant: "대화 출력",
+  error: "오류",
+  item: "작업 항목",
+  plan: "계획",
+  approval: "승인",
+  command_output: "명령 출력",
+  patch: "파일 변경",
+  thinking: "생각",
+  compaction: "컨텍스트 압축",
 };
 
 const MAX_DISPLAY = 50;
@@ -98,7 +98,7 @@ export function EventTimeline() {
               }`}
             >
               <span className="mt-0.5 shrink-0 text-gray-400">
-                {new Date(evt.timestamp).toLocaleTimeString("en-US", {
+                {new Date(evt.timestamp).toLocaleTimeString("ko-KR", {
                   hour12: false,
                   hour: "2-digit",
                   minute: "2-digit",
@@ -108,9 +108,7 @@ export function EventTimeline() {
               <span className="shrink-0">{STREAM_ICONS[evt.stream] ?? "·"}</span>
               <span
                 className="shrink-0 font-medium"
-                style={{
-                  color: STATUS_COLORS[evt.stream === "error" ? "error" : "thinking"],
-                }}
+                style={{ color: STATUS_COLORS[evt.stream === "error" ? "error" : "thinking"] }}
               >
                 {evt.agentName}
               </span>
@@ -125,16 +123,14 @@ export function EventTimeline() {
             {isExpanded && (
               <div className="border-b border-gray-100 bg-gray-50/50 px-3 py-2 dark:border-gray-800 dark:bg-gray-800/50">
                 <div className="space-y-1 text-[11px]">
-                  <DetailRow label="类型" value={STREAM_LABELS[evt.stream] ?? evt.stream} />
+                  <DetailRow label="유형" value={STREAM_LABELS[evt.stream] ?? evt.stream} />
                   <DetailRow label="Agent" value={`${evt.agentName} (${evt.agentId})`} />
                   <DetailRow
-                    label="时间"
-                    value={new Date(evt.timestamp).toLocaleString("zh-CN", {
-                      hour12: false,
-                    })}
+                    label="시간"
+                    value={new Date(evt.timestamp).toLocaleString("ko-KR", { hour12: false })}
                   />
                   <div className="pt-1">
-                    <div className="text-gray-400 dark:text-gray-500">详情</div>
+                    <div className="text-gray-400 dark:text-gray-500">상세</div>
                     <div className="mt-0.5 whitespace-pre-wrap break-all rounded bg-white/60 p-1.5 text-gray-700 dark:bg-gray-900/60 dark:text-gray-300">
                       {(evt.fullText ?? evt.summary) || "—"}
                     </div>
