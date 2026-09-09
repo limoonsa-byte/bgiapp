@@ -1,0 +1,49 @@
+name: Import OpenClaw Office upstream
+
+on:
+  push:
+    branches:
+      - oro-ai-office-original
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clone upstream OpenClaw Office
+        run: |
+          git clone --depth 1 https://github.com/WW-AI-Lab/openclaw-office.git /tmp/openclaw-office
+
+      - name: Replace branch contents with upstream project
+        run: |
+          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name '.github' -exec rm -rf {} +
+          cp -a /tmp/openclaw-office/. .
+          rm -rf .git
+          cp -a /tmp/openclaw-office/.github ./upstream-github-workflows-backup || true
+          mkdir -p .github/workflows
+          cat > .github/workflows/import-openclaw-office.yml <<'YAML'
+          name: Import OpenClaw Office upstream
+          on:
+            workflow_dispatch:
+          jobs:
+            noop:
+              runs-on: ubuntu-latest
+              steps:
+                - run: echo 'Upstream import completed.'
+          YAML
+
+      - name: Commit full upstream source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'chore: import full WW-AI-Lab/openclaw-office upstream' || exit 0
+          git push origin HEAD:oro-ai-office-original
