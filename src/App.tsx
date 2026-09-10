@@ -22,6 +22,8 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useAuthStore } from "@/store/auth-store";
 import { useOfficeStore } from "@/store/office-store";
 
+const DEFAULT_GATEWAY_URL = "wss://openclaw-gateway-production-5b5e.up.railway.app";
+
 function ThemeSync() {
   const theme = useOfficeStore((s) => s.theme);
 
@@ -72,7 +74,6 @@ function PageTracker() {
   const setCurrentPage = useOfficeStore((s) => s.setCurrentPage);
 
   useEffect(() => {
-    // Treat any /skill-workbench/* (including /:slug) as the skill-workbench page.
     const page = location.pathname.startsWith("/skill-workbench")
       ? "skill-workbench"
       : (PAGE_MAP[location.pathname] ?? "office");
@@ -86,7 +87,8 @@ export function App() {
   const injected = (window as unknown as Record<string, unknown>).__OPENCLAW_CONFIG__ as
     | { gatewayUrl?: string; gatewayToken?: string; gatewayWsPath?: string }
     | undefined;
-  const configuredGatewayUrl = injected?.gatewayUrl || import.meta.env.VITE_GATEWAY_URL || "ws://localhost:18789";
+  const configuredGatewayUrl =
+    injected?.gatewayUrl || import.meta.env.VITE_GATEWAY_URL || DEFAULT_GATEWAY_URL;
   const configuredGatewayWsPath =
     injected?.gatewayWsPath || import.meta.env.VITE_GATEWAY_WS_PATH || configuredGatewayUrl;
   const gatewayUrl = resolveGatewayWsUrl(
@@ -96,7 +98,6 @@ export function App() {
   const gatewayToken = injected?.gatewayToken || import.meta.env.VITE_GATEWAY_TOKEN || "";
   const { isMobile } = useResponsive();
 
-  // Seed the auth store defaults and restore any stored session before connecting.
   const hydrate = useAuthStore((s) => s.hydrate);
   useEffect(() => {
     hydrate({ gatewayUrl, token: gatewayToken });
@@ -104,7 +105,6 @@ export function App() {
 
   const { wsClient } = useGatewayConnection({ url: gatewayUrl, token: gatewayToken });
 
-  // DEV-only: 暴露手动会议 API 到浏览器控制台以便调试
   useEffect(() => {
     if (import.meta.env.DEV) {
       const win = window as unknown as Record<string, unknown>;
