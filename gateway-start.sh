@@ -18,38 +18,51 @@ configure_gateway() {
   node dist/index.js config set --batch-json "[{\"path\":\"gateway.mode\",\"value\":\"local\"},{\"path\":\"gateway.bind\",\"value\":\"lan\"},{\"path\":\"gateway.controlUi.allowedOrigins\",\"value\":[\"$ORO_ORIGIN\"]},{\"path\":\"agents.defaults.model.primary\",\"value\":\"openai/gpt-5.6-sol\"}]"
 }
 
-run_gateway() {
+start_gateway_background() {
   node dist/index.js gateway run \
     --allow-unconfigured \
     --auth token \
     --token "$OPENCLAW_GATEWAY_TOKEN" \
     --bind lan \
-    --port "$PORT_VALUE"
+    --port "$PORT_VALUE" &
+  GATEWAY_PID=$!
+}
+
+stop_gateway_background() {
+  if [ -n "${GATEWAY_PID:-}" ]; then
+    kill -TERM "$GATEWAY_PID" 2>/dev/null || true
+    wait "$GATEWAY_PID" 2>/dev/null || true
+    unset GATEWAY_PID
+    sleep 2
+  fi
 }
 
 configure_gateway
 
-# Railway has no one-off interactive shell in this integration. For the first
-# ChatGPT/Codex sign-in, keep the Gateway alive for health checks while the
-# official OpenClaw headless device-code login runs beside it. The successful
-# login is persisted on the mounted /home/node/.openclaw volume and never runs
-# again after the marker is written.
+# One-time ChatGPT/Codex OAuth bootstrap for Railway. `script` allocates the
+# pseudo-TTY required by OpenClaw's device-code login while Railway logs remain
+# readable. A temporary Gateway stays online so Railway health checks keep
+# passing. The OAuth profile and completion marker live on the persistent
+# /home/node/.openclaw volume.
 if [ "${ORO_OPENAI_DEVICE_LOGIN:-0}" = "1" ] && [ ! -f "$OAUTH_MARKER" ]; then
   echo "[ORO] Starting temporary Gateway while waiting for ChatGPT device login"
-  run_gateway &
-  GATEWAY_PID=$!
-  sleep 4
+  start_gateway_background
+  sleep 5
 
   echo "[ORO] OPENAI_DEVICE_LOGIN_BEGIN"
-  if node dist/index.js models auth login --provider openai --device-code --set-default; then
+  set +e
+  script -qefc "node dist/index.js models auth login --provider openai --device-code --set-default" /dev/null
+  LOGIN_STATUS=$?
+  set -e
+
+  if [ "$LOGIN_STATUS" -eq 0 ]; then
     touch "$OAUTH_MARKER"
     echo "[ORO] OPENAI_DEVICE_LOGIN_COMPLETE"
   else
-    echo "[ORO] OPENAI_DEVICE_LOGIN_FAILED" >&2
+    echo "[ORO] OPENAI_DEVICE_LOGIN_FAILED status=$LOGIN_STATUS" >&2
   fi
 
-  kill "$GATEWAY_PID" 2>/dev/null || true
-  wait "$GATEWAY_PID" 2>/dev/null || true
+  stop_gateway_background
 fi
 
 echo "[ORO] Starting OpenClaw Gateway on port $PORT_VALUE"
