@@ -116,6 +116,8 @@ export interface PawnAppearance {
   shirtColor: string;
   pantsColor: string;
   shoeColor: string;
+  /** Index into the approved ORO 8-character sprite sheet. */
+  spriteIndex: number;
 }
 
 export function generatePawnAppearance(agentId: string): PawnAppearance {
@@ -130,5 +132,6 @@ export function generatePawnAppearance(agentId: string): PawnAppearance {
     shirtColor: SHIRT_COLORS[h % SHIRT_COLORS.length],
     pantsColor: PANTS_COLORS[bits(14, PANTS_COLORS.length)],
     shoeColor: SHOE_COLORS[bits(17, SHOE_COLORS.length)],
+    spriteIndex: agentId === "main" ? 0 : h % 8,
   };
 }
