@@ -31,17 +31,17 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Build mock preview
-        run: VITE_MOCK=true npm run build
+      - name: Build live OpenClaw version
+        run: VITE_MOCK=false npm run build
 
-      - name: Upload preview build
+      - name: Upload live build
         uses: actions/upload-artifact@v4
         with:
-          name: oro-ai-office-rpg-dist
+          name: oro-ai-office-rpg-live-dist
           path: dist
           if-no-files-found: error
 
-      - name: Publish static preview branch
+      - name: Publish live static branch
         shell: bash
         run: |
           set -euo pipefail
@@ -54,5 +54,5 @@ jobs:
           cp -a /tmp/oro-ai-office-rpg-dist/. .
           touch .nojekyll
           git add -A
-          git commit -m "preview: ORO AI Office RPG Korean mobile build"
+          git commit -m "live: ORO AI Office with OpenClaw Gateway enabled"
           git push --force origin HEAD:oro-ai-office-rpg-dist
