@@ -1,6 +1,9 @@
 FROM ghcr.io/openclaw/openclaw:latest
 
 USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends util-linux \
+    && rm -rf /var/lib/apt/lists/*
 COPY gateway-start.sh /usr/local/bin/oro-openclaw-start
 RUN chmod +x /usr/local/bin/oro-openclaw-start
 
