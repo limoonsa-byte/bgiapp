@@ -44,11 +44,11 @@ describe("AgentAvatar", () => {
     expect(root?.getAttribute("data-status")).toBe("idle");
   });
 
-  it("renders full-body pawn (legs, torso, head present)", () => {
+  it("renders the approved ORO character sprite skin", () => {
     const { container } = renderAvatar();
-    // Head circle + hand circles → multiple circles; torso/legs → multiple rects
-    expect(container.querySelectorAll("circle").length).toBeGreaterThanOrEqual(3);
-    expect(container.querySelectorAll("rect").length).toBeGreaterThanOrEqual(4);
+    const sprite = container.querySelector("image");
+    expect(sprite).toBeTruthy();
+    expect(sprite?.getAttribute("href")).toMatch(/^data:image\/webp;base64,/);
   });
 
   it("renders error emote on error status", () => {
