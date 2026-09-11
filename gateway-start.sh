@@ -8,7 +8,6 @@ ORO_ORIGIN="${ORO_ALLOWED_ORIGIN:-https://oro-ai-office-rpg-live-lim-chihuns-pro
 OAUTH_MARKER="$STATE_DIR/.oro-openai-oauth-complete"
 OAUTH_LOG="$STATE_DIR/oro-openai-oauth.log"
 OAUTH_FIFO="/tmp/oro-openai-oauth-in"
-HELPER_PORT="${ORO_AUTH_HELPER_PORT:-18800}"
 
 mkdir -p "$STATE_DIR" "$WORKSPACE_DIR"
 
@@ -21,50 +20,28 @@ configure_gateway() {
   node dist/index.js config set --batch-json "[{\"path\":\"gateway.mode\",\"value\":\"local\"},{\"path\":\"gateway.bind\",\"value\":\"lan\"},{\"path\":\"gateway.controlUi.allowedOrigins\",\"value\":[\"$ORO_ORIGIN\"]},{\"path\":\"agents.defaults.model.primary\",\"value\":\"openai/gpt-5.6-sol\"}]"
 }
 
-start_gateway_background() {
-  node dist/index.js gateway run \
-    --allow-unconfigured \
-    --auth token \
-    --token "$OPENCLAW_GATEWAY_TOKEN" \
-    --bind lan \
-    --port "$PORT_VALUE" &
-  GATEWAY_PID=$!
-}
-
-stop_gateway_background() {
-  if [ -n "${GATEWAY_PID:-}" ]; then
-    kill -TERM "$GATEWAY_PID" 2>/dev/null || true
-    wait "$GATEWAY_PID" 2>/dev/null || true
-    unset GATEWAY_PID
-    sleep 2
-  fi
-}
-
 configure_gateway
 
 # One-time ChatGPT subscription OAuth bootstrap for Railway.
-# The mobile helper exposes the OpenAI login URL and accepts the final
-# localhost:1455 callback URL, then feeds it into OpenClaw's interactive OAuth
-# prompt through a FIFO/PTTY. This avoids API-key billing and uses the user's
-# ChatGPT/Codex subscription instead.
+# While OAuth is in progress a tiny helper temporarily owns the public Railway
+# port, so the user can finish login entirely from a phone. After OAuth is saved
+# to the persistent volume, the helper exits and the real Gateway starts on the
+# same port.
 if [ "${ORO_OPENAI_OAUTH_LOGIN:-0}" = "1" ] && [ ! -f "$OAUTH_MARKER" ]; then
-  echo "[ORO] Starting ChatGPT OAuth helper"
+  echo "[ORO] Starting phone-friendly ChatGPT OAuth helper on port $PORT_VALUE"
   rm -f "$OAUTH_FIFO" "$OAUTH_LOG"
   mkfifo "$OAUTH_FIFO"
-  # Keep both ends open so the auth process can start before the user submits
-  # the callback URL.
   exec 3<>"$OAUTH_FIFO"
-
-  start_gateway_background
-  sleep 4
 
   ORO_OAUTH_LOG="$OAUTH_LOG" \
   ORO_OAUTH_FIFO="$OAUTH_FIFO" \
   ORO_OAUTH_DONE="$OAUTH_MARKER" \
-  ORO_AUTH_HELPER_PORT="$HELPER_PORT" \
+  ORO_AUTH_HELPER_PORT="$PORT_VALUE" \
+  ORO_AUTH_HELPER_TOKEN="${ORO_AUTH_HELPER_TOKEN:-}" \
   node /usr/local/bin/oro-oauth-helper.mjs &
   HELPER_PID=$!
 
+  sleep 1
   echo "[ORO] OPENAI_OAUTH_BEGIN"
   set +e
   script -qefc "node dist/index.js models auth login --provider openai --method oauth --set-default" "$OAUTH_LOG" <&3 >/dev/null 2>&1 &
@@ -84,7 +61,6 @@ if [ "${ORO_OPENAI_OAUTH_LOGIN:-0}" = "1" ] && [ ! -f "$OAUTH_MARKER" ]; then
   wait "$HELPER_PID" 2>/dev/null || true
   exec 3>&- 3<&-
   rm -f "$OAUTH_FIFO"
-  stop_gateway_background
 fi
 
 echo "[ORO] Starting OpenClaw Gateway on port $PORT_VALUE"
