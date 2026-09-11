@@ -5,7 +5,10 @@ PORT_VALUE="${PORT:-18789}"
 STATE_DIR="${OPENCLAW_STATE_DIR:-/home/node/.openclaw}"
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-$STATE_DIR/workspace}"
 ORO_ORIGIN="${ORO_ALLOWED_ORIGIN:-https://oro-ai-office-rpg-live-lim-chihuns-projects.vercel.app}"
-OAUTH_MARKER="$STATE_DIR/.oro-openai-device-login-complete"
+OAUTH_MARKER="$STATE_DIR/.oro-openai-oauth-complete"
+OAUTH_LOG="$STATE_DIR/oro-openai-oauth.log"
+OAUTH_FIFO="/tmp/oro-openai-oauth-in"
+HELPER_PORT="${ORO_AUTH_HELPER_PORT:-18800}"
 
 mkdir -p "$STATE_DIR" "$WORKSPACE_DIR"
 
@@ -39,29 +42,48 @@ stop_gateway_background() {
 
 configure_gateway
 
-# One-time ChatGPT/Codex OAuth bootstrap for Railway. `script` allocates the
-# pseudo-TTY required by OpenClaw's device-code login while Railway logs remain
-# readable. A temporary Gateway stays online so Railway health checks keep
-# passing. The OAuth profile and completion marker live on the persistent
-# /home/node/.openclaw volume.
-if [ "${ORO_OPENAI_DEVICE_LOGIN:-0}" = "1" ] && [ ! -f "$OAUTH_MARKER" ]; then
-  echo "[ORO] Starting temporary Gateway while waiting for ChatGPT device login"
-  start_gateway_background
-  sleep 5
+# One-time ChatGPT subscription OAuth bootstrap for Railway.
+# The mobile helper exposes the OpenAI login URL and accepts the final
+# localhost:1455 callback URL, then feeds it into OpenClaw's interactive OAuth
+# prompt through a FIFO/PTTY. This avoids API-key billing and uses the user's
+# ChatGPT/Codex subscription instead.
+if [ "${ORO_OPENAI_OAUTH_LOGIN:-0}" = "1" ] && [ ! -f "$OAUTH_MARKER" ]; then
+  echo "[ORO] Starting ChatGPT OAuth helper"
+  rm -f "$OAUTH_FIFO" "$OAUTH_LOG"
+  mkfifo "$OAUTH_FIFO"
+  # Keep both ends open so the auth process can start before the user submits
+  # the callback URL.
+  exec 3<>"$OAUTH_FIFO"
 
-  echo "[ORO] OPENAI_DEVICE_LOGIN_BEGIN"
+  start_gateway_background
+  sleep 4
+
+  ORO_OAUTH_LOG="$OAUTH_LOG" \
+  ORO_OAUTH_FIFO="$OAUTH_FIFO" \
+  ORO_OAUTH_DONE="$OAUTH_MARKER" \
+  ORO_AUTH_HELPER_PORT="$HELPER_PORT" \
+  node /usr/local/bin/oro-oauth-helper.mjs &
+  HELPER_PID=$!
+
+  echo "[ORO] OPENAI_OAUTH_BEGIN"
   set +e
-  script -qefc "node dist/index.js models auth login --provider openai --device-code --set-default" /dev/null
+  script -qefc "node dist/index.js models auth login --provider openai --method oauth --set-default" "$OAUTH_LOG" <&3 >/dev/null 2>&1 &
+  LOGIN_PID=$!
+  wait "$LOGIN_PID"
   LOGIN_STATUS=$?
   set -e
 
   if [ "$LOGIN_STATUS" -eq 0 ]; then
     touch "$OAUTH_MARKER"
-    echo "[ORO] OPENAI_DEVICE_LOGIN_COMPLETE"
+    echo "[ORO] OPENAI_OAUTH_COMPLETE"
   else
-    echo "[ORO] OPENAI_DEVICE_LOGIN_FAILED status=$LOGIN_STATUS" >&2
+    echo "[ORO] OPENAI_OAUTH_FAILED status=$LOGIN_STATUS" >&2
   fi
 
+  kill -TERM "$HELPER_PID" 2>/dev/null || true
+  wait "$HELPER_PID" 2>/dev/null || true
+  exec 3>&- 3<&-
+  rm -f "$OAUTH_FIFO"
   stop_gateway_background
 fi
 
